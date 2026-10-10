@@ -27,4 +27,77 @@
             const data = encoder.encode(verifier);
             const hash = await crypto.subtle.digest('SHA-256', data);
             return btoa(String.fromCharCode(...new Uint8Array(hash)))
-                .replace(/\+/g, '-').replace
+                .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+
+        async function login() {
+            try {
+                const verifier = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+                    .map(b => b.toString(16).padStart(2, '0')).join('');
+                localStorage.setItem('pkce_verifier', verifier);
+                const challenge = await pkceChallenge(verifier);
+                
+                const authUrl = `https://login.eveonline.com/v2/oauth/authorize/?response_type=code&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&client_id=${CLIENT_ID}&scope=esi-activities.read_character.v1&code_challenge=${challenge}&code_challenge_method=S256&state=mto_bot`;
+                window.location.href = authUrl;
+            } catch (e) {
+                alert("Script error: " + e.message);
+            }
+        }
+
+        function copyData() {
+            const text = document.getElementById('auth-data').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.getElementById('copy-btn');
+                btn.innerText = 'Copied!';
+                btn.style.background = '#4CAF50';
+                setTimeout(() => {
+                    btn.innerText = 'Copy to Clipboard';
+                    btn.style.background = '#444';
+                }, 2000);
+            });
+        }
+
+        async function handleCode() {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            if (!code) return;
+
+            document.getElementById('content').innerHTML = 'Exchanging code for token...';
+            const verifier = localStorage.getItem('pkce_verifier');
+
+            const body = new URLSearchParams({
+                grant_type: 'authorization_code',
+                client_id: CLIENT_ID,
+                code: code,
+                code_verifier: verifier
+            });
+
+            try {
+                const resp = await fetch('https://login.eveonline.com/v2/oauth/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: body
+                });
+                
+                if (!resp.ok) throw new Error(await resp.text());
+                const tokens = await resp.json();
+                
+                const jwtPayload = tokens.access_token.split('.')[1];
+                const decoded = JSON.parse(atob(jwtPayload.replace(/-/g, '+').replace(/_/g, '/')));
+                const charId = decoded.sub.split(':')[2];
+
+                document.getElementById('content').innerHTML = `
+                    <h3 style="color: #4CAF50;">Success! Copy the block below and send it to the admin:</h3>
+                    <pre id="auth-data">Character ID: ${charId}\nRefresh Token: ${tokens.refresh_token}</pre>
+                    <button id="copy-btn" class="copy-btn" onclick="copyData()">Copy to Clipboard</button>
+                    <p><em>(You can close this tab)</em></p>
+                `;
+            } catch (e) {
+                document.getElementById('content').innerHTML = '<p style="color:red;">Error: ' + e.message + '</p>';
+            }
+        }
+
+        handleCode();
+    </script>
+</body>
+</html>
