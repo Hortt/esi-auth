@@ -10,10 +10,9 @@
     </style>
 </head>
 <body>
-
-    <h2>Register in MTO Bot</h2>
+    <h2>Регистрация в MTO Bot</h2>
     <div id="content">
-        <button onclick="login()">Log in to EVE Online</button>
+        <button onclick="login()">Войти через EVE Online</button>
     </div>
 
     <script>
@@ -29,12 +28,19 @@
         }
 
         async function login() {
-            const verifier = Array.from(crypto.getRandomValues(new Uint8Array(32)))
-                .map(b => b.toString(16).padStart(2, '0')).join('');
-            localStorage.setItem('pkce_verifier', verifier);
-            const challenge = await pkceChallenge(verifier);
-            
-const authUrl = `https://login.eveonline.com/v2/oauth/authorize/?response_type=code&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&client_id=${CLIENT_ID}&scope=esi-activities.read_character.v1&code_challenge=${challenge}&code_challenge_method=S256&state=mto_bot`;        }
+            try {
+                const verifier = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+                    .map(b => b.toString(16).padStart(2, '0')).join('');
+                localStorage.setItem('pkce_verifier', verifier);
+                const challenge = await pkceChallenge(verifier);
+                
+                // В этой строке уже прописан новый scope и state
+                const authUrl = `https://login.eveonline.com/v2/oauth/authorize/?response_type=code&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&client_id=${CLIENT_ID}&scope=esi-activities.read_character.v1&code_challenge=${challenge}&code_challenge_method=S256&state=mto_bot`;
+                window.location.href = authUrl;
+            } catch (e) {
+                alert("Ошибка скрипта: " + e.message);
+            }
+        }
 
         async function handleCode() {
             const params = new URLSearchParams(window.location.search);
@@ -61,18 +67,17 @@ const authUrl = `https://login.eveonline.com/v2/oauth/authorize/?response_type=c
                 if (!resp.ok) throw new Error(await resp.text());
                 const tokens = await resp.json();
                 
-                // Декодируем JWT для получения Character ID
                 const jwtPayload = tokens.access_token.split('.')[1];
                 const decoded = JSON.parse(atob(jwtPayload.replace(/-/g, '+').replace(/_/g, '/')));
                 const charId = decoded.sub.split(':')[2];
 
                 document.getElementById('content').innerHTML = `
-                    <h3 style="color: #4CAF50;">Success. Copy and send to admin:</h3>
+                    <h3 style="color: #4CAF50;">Успешно! Скопируй блок ниже и отправь админу:</h3>
                     <pre>Character ID: ${charId}\nRefresh Token: ${tokens.refresh_token}</pre>
-                    <p><em>(Tab can be closed)</em></p>
+                    <p><em>(Можешь закрыть эту вкладку)</em></p>
                 `;
             } catch (e) {
-                document.getElementById('content').innerHTML = '<p style="color:red;">Error: ' + e.message + '</p>';
+                document.getElementById('content').innerHTML = '<p style="color:red;">Ошибка: ' + e.message + '</p>';
             }
         }
 
