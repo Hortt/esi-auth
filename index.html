@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MTO Bot Auth</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; background: #111; color: #eee; }
+        button { padding: 15px 30px; font-size: 16px; cursor: pointer; background: #0078d7; color: white; border: none; border-radius: 4px; }
+        pre { background: #222; padding: 15px; border: 1px solid #444; border-radius: 4px; overflow-x: auto; user-select: all; }
+    </style>
+</head>
+<body>
+
+    <h2>Регистрация в MTO Bot</h2>
+    <div id="content">
+        <button onclick="login()">Войти через EVE Online</button>
+    </div>
+
+    <script>
+        const CLIENT_ID = '675ffd550ed849d28cd17146a74c7e40';
+        const CALLBACK_URL = window.location.href.split('?')[0]; 
+
+        async function pkceChallenge(verifier) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(verifier);
+            const hash = await crypto.subtle.digest('SHA-256', data);
+            return btoa(String.fromCharCode(...new Uint8Array(hash)))
+                .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+
+        async function login() {
+            const verifier = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+                .map(b => b.toString(16).padStart(2, '0')).join('');
+            localStorage.setItem('pkce_verifier', verifier);
+            const challenge = await pkceChallenge(verifier);
+            
+            const authUrl = `https://login.eveonline.com/v2/oauth/authorize/?response_type=code&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&client_id=${CLIENT_ID}&scope=esi-characters.read_mercenary_tactical_operations.v1&code_challenge=${challenge}&code_challenge_method=S256`;
+            window.location.href = authUrl;
+        }
+
+        async function handleCode() {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            if (!code) return;
+
+            document.getElementById('content').innerHTML = 'Обмен кода на токен...';
+            const verifier = localStorage.getItem('pkce_verifier');
+
+            const body = new URLSearchParams({
+                grant_type: 'authorization_code',
+                client_id: CLIENT_ID,
+                code: code,
+                code_verifier: verifier
+            });
+
+            try {
+                const resp = await fetch('https://login.eveonline.com/v2/oauth/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: body
+                });
+                
+                if (!resp.ok) throw new Error(await resp.text());
+                const tokens = await resp.json();
+                
+                // Декодируем JWT для получения Character ID
+                const jwtPayload = tokens.access_token.split('.')[1];
+                const decoded = JSON.parse(atob(jwtPayload.replace(/-/g, '+').replace(/_/g, '/')));
+                const charId = decoded.sub.split(':')[2];
+
+                document.getElementById('content').innerHTML = `
+                    <h3 style="color: #4CAF50;">Успешно! Скопируй блок ниже и отправь админу:</h3>
+                    <pre>Character ID: ${charId}\nRefresh Token: ${tokens.refresh_token}</pre>
+                    <p><em>(Можешь закрыть эту вкладку)</em></p>
+                `;
+            } catch (e) {
+                document.getElementById('content').innerHTML = '<p style="color:red;">Ошибка: ' + e.message + '</p>';
+            }
+        }
+
+        handleCode();
+    </script>
+</body>
+</html>
