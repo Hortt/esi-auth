@@ -11,7 +11,7 @@
 </head>
 <body>
 
-    <h2>Регистрация в MTO Bot</h2>
+    <h2>Register in MTO Bot</h2>
     <div id="content">
         <button onclick="login()">Log in to EVE Online</button>
     </div>
@@ -34,8 +34,7 @@
             localStorage.setItem('pkce_verifier', verifier);
             const challenge = await pkceChallenge(verifier);
             
-            const authUrl = `https://login.eveonline.com/v2/oauth/authorize/?response_type=code&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&client_id=${CLIENT_ID}&scope=esi-characters.read_mercenary_tactical_operations.v1&code_challenge=${challenge}&code_challenge_method=S256`;
-            window.location.href = authUrl;
+const authUrl = `https://login.eveonline.com/v2/oauth/authorize/?response_type=code&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&client_id=${CLIENT_ID}&scope=esi-characters.read_mercenary_tactical_operations.v1&code_challenge=${challenge}&code_challenge_method=S256&state=mto_bot`;            window.location.href = authUrl;
         }
 
         async function handleCode() {
