@@ -10,9 +10,9 @@
     </style>
 </head>
 <body>
-    <h2>Регистрация в MTO Bot</h2>
+    <h2>MTO Bot Registration</h2>
     <div id="content">
-        <button onclick="login()">Войти через EVE Online</button>
+        <button onclick="login()">Log in with EVE Online</button>
     </div>
 
     <script>
@@ -34,11 +34,10 @@
                 localStorage.setItem('pkce_verifier', verifier);
                 const challenge = await pkceChallenge(verifier);
                 
-                // В этой строке уже прописан новый scope и state
                 const authUrl = `https://login.eveonline.com/v2/oauth/authorize/?response_type=code&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&client_id=${CLIENT_ID}&scope=esi-activities.read_character.v1&code_challenge=${challenge}&code_challenge_method=S256&state=mto_bot`;
                 window.location.href = authUrl;
             } catch (e) {
-                alert("Ошибка скрипта: " + e.message);
+                alert("Script error: " + e.message);
             }
         }
 
@@ -47,41 +46,5 @@
             const code = params.get('code');
             if (!code) return;
 
-            document.getElementById('content').innerHTML = 'Обмен кода на токен...';
-            const verifier = localStorage.getItem('pkce_verifier');
-
-            const body = new URLSearchParams({
-                grant_type: 'authorization_code',
-                client_id: CLIENT_ID,
-                code: code,
-                code_verifier: verifier
-            });
-
-            try {
-                const resp = await fetch('https://login.eveonline.com/v2/oauth/token', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: body
-                });
-                
-                if (!resp.ok) throw new Error(await resp.text());
-                const tokens = await resp.json();
-                
-                const jwtPayload = tokens.access_token.split('.')[1];
-                const decoded = JSON.parse(atob(jwtPayload.replace(/-/g, '+').replace(/_/g, '/')));
-                const charId = decoded.sub.split(':')[2];
-
-                document.getElementById('content').innerHTML = `
-                    <h3 style="color: #4CAF50;">Успешно! Скопируй блок ниже и отправь админу:</h3>
-                    <pre>Character ID: ${charId}\nRefresh Token: ${tokens.refresh_token}</pre>
-                    <p><em>(Можешь закрыть эту вкладку)</em></p>
-                `;
-            } catch (e) {
-                document.getElementById('content').innerHTML = '<p style="color:red;">Ошибка: ' + e.message + '</p>';
-            }
-        }
-
-        handleCode();
-    </script>
-</body>
-</html>
+            document.getElementById('content').innerHTML = 'Exchanging code for token...';
+            const verifier = localStorage.
