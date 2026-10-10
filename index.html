@@ -13,7 +13,7 @@
 
     <h2>Регистрация в MTO Bot</h2>
     <div id="content">
-        <button onclick="login()">Войти через EVE Online</button>
+        <button onclick="login()">Log in to EVE Online</button>
     </div>
 
     <script>
@@ -69,12 +69,12 @@
                 const charId = decoded.sub.split(':')[2];
 
                 document.getElementById('content').innerHTML = `
-                    <h3 style="color: #4CAF50;">Успешно! Скопируй блок ниже и отправь админу:</h3>
+                    <h3 style="color: #4CAF50;">Success. Copy and send to admin:</h3>
                     <pre>Character ID: ${charId}\nRefresh Token: ${tokens.refresh_token}</pre>
-                    <p><em>(Можешь закрыть эту вкладку)</em></p>
+                    <p><em>(Tab can be closed)</em></p>
                 `;
             } catch (e) {
-                document.getElementById('content').innerHTML = '<p style="color:red;">Ошибка: ' + e.message + '</p>';
+                document.getElementById('content').innerHTML = '<p style="color:red;">Error: ' + e.message + '</p>';
             }
         }
 
